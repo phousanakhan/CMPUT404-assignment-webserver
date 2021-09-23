@@ -42,3 +42,8 @@ Use: to understand status code
 https://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3
 Credit: w3.org
 Use: to understand general syntax of HTTP/1.1
+
+
+https://stackoverflow.com/questions/3661574/rfc-1123-in-python *rfc1123 date as how rfc2612 defines http/1.1 
+http://tools.ietf.org/html/rfc2616#section-3.3
+Credit: ohe (stackoverflow), ietf
