@@ -29,9 +29,6 @@ from time import strftime, gmtime
 # try: curl -v -X GET http://127.0.0.1:8080/
 
 
-# https://stackoverflow.com/questions/3661574/rfc-1123-in-python *rfc1123 date as how rfc2612 defines http/1.1
-# http://tools.ietf.org/html/rfc2616#section-3.3
-
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
