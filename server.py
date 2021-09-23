@@ -1,6 +1,7 @@
 #  coding: utf-8
 import socketserver
 import os
+from time import strftime, gmtime
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 #
@@ -27,58 +28,28 @@ import os
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-# https://stackoverflow.com/questions/3204782/how-to-check-if-a-file-is-a-directory-or-regular-file-in-python
-# check whether directory is path or file
 
+# https://stackoverflow.com/questions/3661574/rfc-1123-in-python *rfc1123 date as how rfc2612 defines http/1.1
+# http://tools.ietf.org/html/rfc2616#section-3.3
 
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        # print("Got a request of: %s\n" % self.data)
-        # self.request.sendall(bytearray("OK", 'utf-8'))
         data = self.data.decode('utf-8').split('\r\n')
-        # print("DAATTAAA: ", data)
-        # print("DATA: ", data)
-        # print("Referer?: ", data.getHeader("referer"))
-        # referer = list(filter(lambda x: x.startswith("Referer"), data))
-        # print("REFER LAMBDA: ", referer)
         request = data[0].split()  # ['GET', '/base.css', 'HTTP/1.1']
-
         path_to_redirect = None
         try:
-            #request_referer = data[7].split()[1]
-            #print("request_referer:", request_referer, type(request_referer))
-            #path_to_redirect = request_referer[21:]
-            #print("path to redirect:", path_to_redirect, type(path_to_redirect))
-
             request_referer = list(
                 filter(lambda x: x.startswith("Referer"), data))
             request_referer = request_referer[0].split()[1]
             path_to_redirect = request_referer[21:]
-            # print("NEW request_referer:", request_referer_new,
-            # type(request_referer_new))
-            # print("NEW path to redirect:", path_to_redirect_new,
-            # type(path_to_redirect_new))
-
-            # print("path_to_redirect==path_to_redirect_new?:",
-            # path_to_redirect == path_to_redirect_new)
-            # print(path_to_redirect)
-            # print(path_to_redirect_new)
-            # request_referer == request_referer_new[0].split()[1])
-            # print(request_referer)
-            # print(request_referer_new[0].split()[1])
         except Exception:
             request_referer = None
-
         request_method = request[0]
 
         # base.css, index.html, basically ==> localhost:8080/whatever, the "/whatever" is request_resource
         request_resource = request[1]
-
-        # handle when css redirect
-        # print("IS IT EMPTY path_to_redirect ", path_to_redirect)
-        # and path to redirect is not a file *MUST ADD THIS
         if request_resource[-4:] == ".css" and path_to_redirect != None and path_to_redirect[-1] != "/" and len(request_resource) != 1 and os.path.isfile("www"+request_resource) != True:
             if path_to_redirect[-1] != "/":
                 path_to_redirect += "/"
@@ -96,7 +67,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
         # if the requested resource if a directory
         elif os.path.isdir("www"+request_resource) == True:
             # check if need to send 301 moved permanently or not
-            # print("REQUEST_resource if is directory: ", request_resource)
             if request_resource[-1] != "/":
                 request_resource += "/"
                 self.send_301(request_resource)
@@ -110,7 +80,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.show_index_html(request_resource)
 
             elif ".css" == request[1][-4:]:
-                # print("HERE: ", request[1][-4:])
                 self.show_css(request_resource)
             else:
                 # handle /../../../../../../../../../../../../etc/group
@@ -127,7 +96,13 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 f = open("www"+request_resource, 'r')
             data = f.read()
             len_data = len(data)
-            message = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\r\n"+data
+            tm = strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime())
+            message = "HTTP/1.1 200 OK\r\n"
+            message += "Date: {}\r\n"
+            message += "Content-Length: {}\r\n"
+            message += "Connection: close\r\n"
+            message += "Content-Type: text/html\r\n\r\n"+data
+            message = message.format(tm, len_data)
             self.request.sendall(bytearray(message, 'utf-8'))
         except Exception:
             self.send_404()
@@ -135,22 +110,36 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def show_css(self, request_resource):
         try:
             f = open("www"+request_resource, 'r')
-            # print("SHOW_CSS: ", "www"+request_resource)
             data = f.read()
-            len_data = len(data)
-            message = "HTTP/1.1 200 OK\r\nContent-Type: text/css\r\n\r\n\r\n"+data
+            message = "HTTP/1.1 200 OK\r\n"
+            message += "Connection: close\r\n"
+            message += "Content-Type: text/css\r\n\r\n"+data
             self.request.sendall(bytearray(message, 'utf-8'))
         except Exception:
             self.send_404()
 
     def send_405(self):
         data = "405 Method Not Allowed\r\n\r\n"
-        message = "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/css\r\n\r\n\r\n"+data
+        len_data = len(data)
+        tm = strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime())
+        message = "HTTP/1.1 405 Method Not Allowed\r\n"
+        message += "Date: {}\r\n"
+        message += "Content-Length: {}\r\n"
+        message += "Connection: close\r\n"
+        message += "Content-Type: text/html\r\n\r\n"+data
+        message = message.format(tm, len_data)
         self.request.sendall(bytearray(message, 'utf-8'))
 
     def send_404(self):
         data = "404 Not Found\r\n\r\n"
-        message = "HTTP/1.1 404 Not Found\r\nContent-Type: text/css\r\n\r\n\r\n"+data
+        len_data = len(data)
+        tm = strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime())
+        message = "HTTP/1.1 404 Not Found\r\n"
+        message += "Date: {}\r\n"
+        message += "Content-Length: {}\r\n"
+        message += "Connection: close\r\n"
+        message += "Content-Type: text/html\r\n\r\n"+data
+        message = message.format(tm, len_data)
         self.request.sendall(bytearray(message, 'utf-8'))
 
     def send_301(self, request_resource):
@@ -158,8 +147,14 @@ class MyWebServer(socketserver.BaseRequestHandler):
             # request_resource = www/deep/    *already tag on the "/" at the handle() func
             f = open("www"+request_resource+"index.html", 'r')
             data = f.read()
-            # len_data = len(data)
-            message = "HTTP/1.1 301 Moved Permanently\r\nContent-Type: text/html\r\n\r\n\r\n"+data
+            len_data = len(data)
+            tm = strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime())
+            message = "HTTP/1.1 301 Moved Permanently\r\n"
+            message += "Date: {}\r\n"
+            message += "Content-Length: {}\r\n"
+            message += "Connection: close\r\n"
+            message += "Content-Type: text/html\r\n\r\n"+data
+            message = message.format(tm, len_data)
             self.request.sendall(bytearray(message, 'utf-8'))
         except Exception:
             self.send_404()
@@ -168,8 +163,14 @@ class MyWebServer(socketserver.BaseRequestHandler):
         try:
             f = open("www"+request_resource+"index.html", 'r')
             data = f.read()
-            # len_data = len(data)
-            message = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\r\n"+data
+            len_data = len(data)
+            tm = strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime())
+            message = "HTTP/1.1 200 OK\r\n"
+            message += "Date: {}\r\n"
+            message += "Content-Length: {}\r\n"
+            message += "Connection: close\r\n"
+            message += "Content-Type: text/html\r\n\r\n"+data
+            message = message.format(tm, len_data)
             self.request.sendall(bytearray(message, 'utf-8'))
         except Exception:
             self.send_404()
